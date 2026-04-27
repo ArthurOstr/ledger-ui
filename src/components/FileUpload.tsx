@@ -2,10 +2,10 @@ import { useState, useRef } from 'react';
 import axios from 'axios';
 
 interface Props {
-  onUploadSucess: () => void;
+  onUploadSuccess: () => void;
 }
 
-export default function FileUpload({ onUploadSucess }: Props) {
+export default function FileUpload({ onUploadSuccess }: Props) {
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -30,7 +30,7 @@ export default function FileUpload({ onUploadSucess }: Props) {
 
       // Clear the input. Refresh the page 
       if (fileInputRef.current) fileInputRef.current.value = '';
-      onUploadSucess();
+      onUploadSuccess();
     } catch (err: any) {
       console.error(err);
       setError(err.response?.data?.detail || 'Failed  to upload the ledger.');

@@ -5,7 +5,7 @@ import FileUpload from '../components/FileUpload';
 
 
 export default function Dashboard() {
-  const [transactions, getTransactions] = useState<Transaction[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
