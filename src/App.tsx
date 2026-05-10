@@ -1,15 +1,18 @@
+import React from 'react';
 import Dashboard from './pages/Dashboard';
+import LoginScreen from './pages/LoginScreen';
+import { useAuth } from './context/AuthContext';
 
-export default function App() {
+function App() {
+  // Read the global state from COntext 
+  const { isAuthenticated } = useAuth();
+
+  // If a user is logged, he enters. Otherwise access denied 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900">
-      <header className="bg-white border-b border-gray-200 px-6 py-4">
-        <h1 className="text-xl font-bold tracking-tight text-gray-900">Ledger Engine</h1>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-6 py-8">
-        <Dashboard />
-      </main>
-    </div>
+    <>
+      {isAuthenticated ? <Dashboard /> : <LoginScreen />}
+    </>
   );
 }
+
+export default App;
