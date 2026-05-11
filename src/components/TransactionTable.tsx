@@ -1,4 +1,4 @@
-import type { Transaction } from '../api/client'
+import type { Transaction } from '../types'
 
 interface Props {
   transactions: Transaction[];

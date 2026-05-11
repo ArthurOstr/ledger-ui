@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState } from 'react';
+import type { ReactNode } from 'react';
 import apiClient from '../api/client';
 
 interface AuthContextType {
@@ -28,7 +29,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       const newToken = response.data.access_token;
 
-      // Saving to memmory 
+      // Saving to memory
       setToken(newToken);
       localStorage.setItem('token', newToken);
     } catch (error) {
@@ -49,7 +50,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   );
 };
 
-// Custom hook to reuse the auth context in any commponent 
+// Custom hook to reuse the auth context in any component
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
