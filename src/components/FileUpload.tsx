@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import axios from 'axios';
+import apiClient from '../api/client';
 
 interface Props {
   onUploadSuccess: () => void;
@@ -24,7 +24,7 @@ export default function FileUpload({ onUploadSuccess }: Props) {
 
     try {
       // POST reqyest to Back-end
-      await axios.post('http://127.0.0.1:8000/api/transactions/upload', formData, {
+      await apiClient.post('/transactions/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
