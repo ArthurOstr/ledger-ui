@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 
 export default function LoginScreen() {
-  const { login } = useAuth();
+  const { login, register } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isRegistering, setIsRegistering] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -14,9 +15,13 @@ export default function LoginScreen() {
     setIsLoading(true);
 
     try {
-      // It hits the FastAPI /login route and saves the token
-      await login(email, password);
+      if (isRegistering) {
+        await register(email, password);
+      } else {
 
+        // It hits the FastAPI /login route and saves the token
+        await login(email, password);
+      }
       // If success, the AuthContext updates and the app will work as intended 
     } catch (err) {
       setError('Invalid email or password');
@@ -27,46 +32,31 @@ export default function LoginScreen() {
 
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8 bg-white p-10 rounded-xl shadow-lg border border-gray-100">
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-md space-y-8">
         <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Ledger Engine
+          <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-gray-900">
+            {isRegistering ? 'Create your Vault' : 'Access your Vault'}
           </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Enter your credentials to access the vault
-          </p>
         </div>
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          {error && (
-            <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4 text-sm text-red-700">
-              {error}
-            </div>
-          )}
-
-          <div className="rounded-md shadow-sm space-y-4">
+          <div className="-space-y-px rounded-md shadow-sm">
             <div>
-              <label htmlFor="email-address" className="sr-only">Email address</label>
               <input
-                id="email-address"
-                name="email"
                 type="email"
                 required
-                className="appearance-none relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                className="relative block w-full appearance-none rounded-none rounded-t-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-gray-900 focus:outline-none focus:ring-gray-900 sm:text-sm"
                 placeholder="Email address"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
             </div>
             <div>
-              <label htmlFor="password" className="sr-only">Password</label>
               <input
-                id="password"
-                name="password"
                 type="password"
                 required
-                className="appearance-none relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                className="relative block w-full appearance-none rounded-none rounded-b-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-gray-900 focus:outline-none focus:ring-gray-900 sm:text-sm"
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -74,18 +64,35 @@ export default function LoginScreen() {
             </div>
           </div>
 
+          {error && <div className="text-red-600 text-sm text-center font-mono">{error}</div>}
+
           <div>
             <button
               type="submit"
               disabled={isLoading}
-              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition-colors"
+              className="group relative flex w-full justify-center rounded-md border border-transparent bg-gray-900 py-2 px-4 text-sm font-medium text-white hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 disabled:opacity-50"
             >
-              {isLoading ? 'Decrypting...' : 'Sign In'}
+              {isLoading ? 'Processing...' : (isRegistering ? 'Initialize Ledger' : 'Unlock')}
+            </button>
+          </div>
+
+          {/* The Toggle Button */}
+          <div className="text-center">
+            <button
+              type="button"
+              onClick={() => {
+                setIsRegistering(!isRegistering);
+                setError(null); // Clear errors when flipping modes
+              }}
+              className="text-sm text-gray-600 hover:text-gray-900 underline underline-offset-4"
+            >
+              {isRegistering
+                ? 'Already have an account? Sign in.'
+                : 'Need a vault? Create an account.'}
             </button>
           </div>
         </form>
       </div>
-    </div>
-  );
+    </div>);
 }
 

@@ -23,7 +23,7 @@ export default function FileUpload({ onUploadSuccess }: Props) {
     formData.append('file', file);
 
     try {
-      // POST reqyest to Back-end
+      // POST request to Back-end
       await apiClient.post('/transactions/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
