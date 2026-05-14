@@ -42,7 +42,7 @@ function AuthForm({
     if (!form.email.trim() || !form.password) return 'Please fill in all fields.';
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(form.email)) return 'Please enter a valid email adress';
+    if (!emailRegex.test(form.email)) return 'Please enter a valid email address';
     if (form.password.length < 8) return 'Password must be at least 8 characters.';
     if (mode === 'register' && form.password !== form.confirm) return 'Passwords do not match.';
     return '';
@@ -285,16 +285,16 @@ export default function LoginScreen() {
 // Inline styles (swap for Tailwind / CSS modules as you prefer)
 // ---------------------------------------------------------------------------
 const colors = {
-  bg: '#ffffff',
-  bgSecondary: '#f8f8f7',
-  text: '#1a1a1a',
-  textMuted: '#6b7280',
-  textHint: '#9ca3af',
-  border: 'rgba(0,0,0,0.12)',
-  borderHover: 'rgba(0,0,0,0.25)',
-  errorBg: '#fef2f2',
-  errorBorder: '#fecaca',
-  errorText: '#dc2626',
+  bg: '#0f0f0e',
+  bgSecondary: '#1c1c1b',
+  text: '#f0ede8',
+  textMuted: '#a09d98',
+  textHint: '#6b6864',
+  border: 'rgba(255,255,255,0.10)',
+  borderHover: 'rgba(255,255,255,0.22)',
+  errorBg: '#2d1515',
+  errorBorder: '#5c2323',
+  errorText: '#f87171',
 };
 
 const styles: Record<string, React.CSSProperties> = {
@@ -358,7 +358,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   tabActive: {
     background: colors.text,
-    color: '#ffffff',
+    color: colors.bg,
   },
   formBody: {
     display: 'flex',
@@ -417,7 +417,7 @@ const styles: Record<string, React.CSSProperties> = {
     width: '100%',
     padding: '11px 0',
     background: colors.text,
-    color: '#ffffff',
+    color: colors.bg,
     border: 'none',
     borderRadius: 8,
     fontSize: 14,
