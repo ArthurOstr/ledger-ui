@@ -1,5 +1,20 @@
-import React, { useState, useId } from 'react';
+import { useState, useId } from 'react';
 import { useAuth } from '../context/AuthContext';
+
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+
+import {
+  Lock,          // brand logo
+  Mail,          // email field icon
+  ArrowRight,    // submit button arrow
+  AlertCircle,   // error banner icon
+  ShieldCheck,   // trust badges + feature item
+  TrendingUp,    // feature: spending tracking
+  History,       // feature: audit log
+  Monitor,       // feature: multi-device
+} from 'lucide-react';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -13,10 +28,56 @@ interface FormState {
 }
 
 // ---------------------------------------------------------------------------
-// Sub-components
+// COMPONENT: Field
 // ---------------------------------------------------------------------------
+function Field({
+  label,
+  htmlFor,
+  children,
+}: {
+  label: string;
+  htmlFor: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5 mb-3">
+      <Label
+        htmlFor={htmlFor}
+        // text-muted-foreground is a shadcn CSS variable — it automatically
+        // adapts if you switch between light/dark themes later.
+        className="text-[11px] font-medium tracking-widest uppercase text-muted-foreground"
+      >
+        {label}
+      </Label>
+      {children}
+    </div>
+  );
+}
 
-/** Left panel: the actual form */
+// ---------------------------------------------------------------------------
+// COMPONENT: InputWithIcon
+// ---------------------------------------------------------------------------
+function InputWithIcon({
+  icon,
+  children,
+}: {
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="relative">
+      {/* Icon — pointer-events-none so clicks pass through to the input */}
+      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none flex">
+        {icon}
+      </span>
+      {children}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// COMPONENT: AuthForm  (left panel)
+// ---------------------------------------------------------------------------
 function AuthForm({
   mode,
   onModeChange,
@@ -25,24 +86,27 @@ function AuthForm({
   onModeChange: (m: Mode) => void;
 }) {
   const { login, register } = useAuth();
+
   const emailId = useId();
   const passwordId = useId();
   const confirmId = useId();
 
   const [form, setForm] = useState<FormState>({ email: '', password: '', confirm: '' });
   const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setLoading] = useState(false);
 
+  // Generic change handler — takes the field name, returns a typed handler.
+  // Clears the error on every keystroke so stale messages don't linger.
   const set = (field: keyof FormState) => (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
     setError('');
   };
 
+  // Client-side validation runs before any network request.
+  // Returns an error string, or '' if everything is fine.
   const validate = (): string => {
     if (!form.email.trim() || !form.password) return 'Please fill in all fields.';
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(form.email)) return 'Please enter a valid email address';
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) return 'Please enter a valid email address.';
     if (form.password.length < 8) return 'Password must be at least 8 characters.';
     if (mode === 'register' && form.password !== form.confirm) return 'Passwords do not match.';
     return '';
@@ -54,20 +118,17 @@ function AuthForm({
     if (validationError) { setError(validationError); return; }
 
     setError('');
-    setIsLoading(true);
+    setLoading(true);
     try {
       if (mode === 'register') {
         await register(form.email, form.password);
       } else {
         await login(form.email, form.password);
       }
-      console.log('Submit:', mode, form.email);
     } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : 'Something went wrong. Please try again.';
-      setError(message);
+      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
@@ -78,42 +139,55 @@ function AuthForm({
   };
 
   return (
-    <div style={styles.panel}>
-      {/* Brand */}
-      <div style={styles.brand}>
-        <LockIcon />
+    <div className="flex flex-col justify-center px-6 py-8 md:px-10 md:py-11 md:flex-[0_0_52%] bg-[#0f0f0e]">
+
+      {/* ── Brand ────────────────────────────────────────────────────── */}
+      <div className="flex items-center gap-2 text-[#f0ede8] font-semibold text-lg tracking-tight mb-9">
+        <Lock size={18} aria-hidden="true" />
         Vault
       </div>
 
-      {/* Tab switcher */}
-      <div style={styles.tabRow} role="tablist">
+      {/* ── Tab switcher ────────────────────────────────────────────── */}
+      <div role="tablist" className="flex border border-white/10 rounded-lg overflow-hidden mb-7">
         {(['signin', 'register'] as Mode[]).map((m) => (
           <button
             key={m}
             role="tab"
-            aria-selected={mode === m}
-            style={{ ...styles.tab, ...(mode === m ? styles.tabActive : {}) }}
-            onClick={() => switchMode(m)}
             type="button"
+            aria-selected={mode === m}
+            onClick={() => switchMode(m)}
+            className={[
+              'flex-1 py-2 text-[13px] font-medium transition-colors',
+              mode === m
+                ? 'bg-[#f0ede8] text-[#0f0f0e]'           // active
+                : 'text-[#a09d98] hover:text-[#f0ede8]',  // inactive
+            ].join(' ')}
           >
             {m === 'signin' ? 'Sign in' : 'Create account'}
           </button>
         ))}
       </div>
 
-      <form onSubmit={handleSubmit} noValidate style={styles.formBody}>
-        {/* Error banner */}
+      {/* ── Form ─────────────────────────────────────────────────────── */}
+      <form onSubmit={handleSubmit} noValidate className="flex flex-col">
+
+        {/* Error banner — only mounts when there's an error. */}
         {error && (
-          <div style={styles.errorBanner} role="alert" aria-live="polite">
-            <AlertIcon />
+          <div
+            id="auth-error"
+            role="alert"
+            aria-live="polite"
+            className="flex items-center gap-2 text-xs text-red-400 bg-red-950/40 border border-red-900/50 rounded-lg px-3 py-2 mb-4"
+          >
+            <AlertCircle size={14} aria-hidden="true" />
             {error}
           </div>
         )}
 
-        {/* Email */}
+        {/* ── Email field ────────────────────────────────────────────── */}
         <Field label="Email" htmlFor={emailId}>
-          <InputWithIcon icon={<MailIcon />}>
-            <input
+          <InputWithIcon icon={<Mail size={15} />}>
+            <Input
               id={emailId}
               type="email"
               required
@@ -122,15 +196,15 @@ function AuthForm({
               onChange={set('email')}
               autoComplete="email"
               aria-describedby={error ? 'auth-error' : undefined}
-              style={styles.input}
+              className="pl-9 bg-[#0f0f0e] border-white/10 text-[#f0ede8] placeholder:text-[#6b6864] focus-visible:ring-white/20 focus-visible:border-white/25"
             />
           </InputWithIcon>
         </Field>
 
-        {/* Password */}
+        {/* ── Password field ─────────────────────────────────────────── */}
         <Field label="Password" htmlFor={passwordId}>
-          <InputWithIcon icon={<LockSmallIcon />}>
-            <input
+          <InputWithIcon icon={<Lock size={15} />}>
+            <Input
               id={passwordId}
               type="password"
               required
@@ -139,16 +213,16 @@ function AuthForm({
               onChange={set('password')}
               autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
               minLength={8}
-              style={styles.input}
+              className="pl-9 bg-[#0f0f0e] border-white/10 text-[#f0ede8] placeholder:text-[#6b6864] focus-visible:ring-white/20 focus-visible:border-white/25"
             />
           </InputWithIcon>
         </Field>
 
-        {/* Confirm password — register only */}
+        {/* ── Confirm password — register mode only ──────────────────── */}
         {mode === 'register' && (
           <Field label="Confirm password" htmlFor={confirmId}>
-            <InputWithIcon icon={<LockCheckIcon />}>
-              <input
+            <InputWithIcon icon={<Lock size={15} />}>
+              <Input
                 id={confirmId}
                 type="password"
                 required
@@ -157,76 +231,90 @@ function AuthForm({
                 onChange={set('confirm')}
                 autoComplete="new-password"
                 minLength={8}
-                style={styles.input}
+                className="pl-9 bg-[#0f0f0e] border-white/10 text-[#f0ede8] placeholder:text-[#6b6864] focus-visible:ring-white/20 focus-visible:border-white/25"
               />
             </InputWithIcon>
           </Field>
         )}
 
-        {/* Submit */}
-        <button
+        {/* ── Submit button ────────────────────────────────────────────── */}
+        <Button
           type="submit"
           disabled={isLoading}
-          style={{ ...styles.submitBtn, ...(isLoading ? styles.submitBtnDisabled : {}) }}
+          className="w-full mt-1 bg-[#f0ede8] text-[#0f0f0e] hover:bg-white transition-colors"
         >
-          {isLoading ? 'Processing…' : mode === 'signin' ? 'Unlock vault' : 'Initialize ledger'}
-          {!isLoading && <ArrowRightIcon />}
-        </button>
+          {isLoading
+            ? 'Processing…'
+            : mode === 'signin' ? 'Unlock vault' : 'Initialize ledger'}
+          {!isLoading && <ArrowRight size={15} className="ml-2" aria-hidden="true" />}
+        </Button>
 
-        {/* OAuth divider */}
-        <div style={styles.divider}>
-          <div style={styles.dividerLine} />
-          <span style={styles.dividerText}>or continue with</span>
-          <div style={styles.dividerLine} />
+        {/* ── OAuth divider ─────────────────────────────────────────── */}
+        <div className="flex items-center gap-3 my-4">
+          <div className="flex-1 h-px bg-white/10" />
+          <span className="text-[12px] text-[#6b6864]">or continue with</span>
+          <div className="flex-1 h-px bg-white/10" />
         </div>
 
-        {/* Google OAuth */}
-        <button type="button" style={styles.oauthBtn} onClick={() => console.log('Google OAuth')}>
+        {/* ── Google OAuth button ──────────────────────────────────────── */}
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => { window.location.href = `${import.meta.env.VITE_API_URL}/auth/google`; }}
+          className="w-full border-white/10 text-[#a09d98] bg-transparent hover:bg-white/5 hover:text-[#f0ede8] hover:border-white/20 transition-colors"
+        >
           <GoogleIcon />
-          Continue with Google
-        </button>
+          <span className="ml-2">Continue with Google</span>
+        </Button>
 
-        {/* Legal */}
-        <p style={styles.legal}>
+        {/* ── Legal ─────────────────────────────────────────────────── */}
+        <p className="text-[11px] text-[#6b6864] text-center mt-4 leading-relaxed">
           By continuing you agree to our{' '}
-          <a href="/terms" style={styles.legalLink}>Terms</a> and{' '}
-          <a href="/privacy" style={styles.legalLink}>Privacy Policy</a>.
+          <a href="/terms" className="text-[#a09d98] underline underline-offset-2 hover:text-[#f0ede8] transition-colors">Terms</a>
+          {' '}and{' '}
+          <a href="/privacy" className="text-[#a09d98] underline underline-offset-2 hover:text-[#f0ede8] transition-colors">Privacy Policy</a>.
         </p>
       </form>
     </div>
   );
 }
 
-/** Right panel: trust / feature highlights */
+// ---------------------------------------------------------------------------
+// COMPONENT: TrustPanel  (right panel)
+// ---------------------------------------------------------------------------
 function TrustPanel() {
   const features = [
-    { icon: <ShieldLockIcon />, text: 'End-to-end encrypted at rest and in transit' },
-    { icon: <ChartIcon />, text: 'Track spending across all accounts in one view' },
-    { icon: <HistoryIcon />, text: 'Full audit log — every entry, timestamped' },
-    { icon: <DevicesIcon />, text: 'Sync across all your devices instantly' },
+    { icon: <ShieldCheck size={16} />, text: 'End-to-end encrypted at rest and in transit' },
+    { icon: <TrendingUp size={16} />, text: 'Track spending across all accounts in one view' },
+    { icon: <History size={16} />, text: 'Full audit log — every entry, timestamped' },
+    { icon: <Monitor size={16} />, text: 'Sync across all your devices instantly' },
   ];
 
   const badges = ['AES-256', 'SOC 2 Type II', 'GDPR ready'];
 
   return (
-    <div style={styles.sidePanel}>
+    <div className="hidden md:flex md:flex-[0_0_48%] flex-col justify-between px-8 py-11 bg-[#1c1c1b] border-l border-white/10">
+
+      {/* Features */}
       <div>
-        <p style={styles.sideHeadline}>
+        <p className="text-xl font-medium text-[#f0ede8] leading-snug mb-5">
           Your financial data,<br />locked and organized.
         </p>
-        <ul style={styles.featureList}>
+        <ul className="flex flex-col gap-3.5">
           {features.map((f, i) => (
-            <li key={i} style={styles.featureItem}>
-              <span style={styles.featureIcon}>{f.icon}</span>
+            <li key={i} className="flex items-start gap-2.5 text-[13px] text-[#a09d98] leading-relaxed">
+              <span className="text-[#f0ede8] mt-0.5 shrink-0" aria-hidden="true">{f.icon}</span>
               {f.text}
             </li>
           ))}
         </ul>
       </div>
-      <div style={styles.trustRow}>
+
+      {/* Trust badges */}
+      <div className="flex flex-wrap gap-4 pt-6 border-t border-white/10">
         {badges.map((b) => (
-          <div key={b} style={styles.trustChip}>
-            <ShieldCheckIcon />
+          <div key={b} className="flex items-center gap-1.5 text-[11px] text-[#6b6864]">
+            <ShieldCheck size={13} aria-hidden="true" />
             {b}
           </div>
         ))}
@@ -235,45 +323,16 @@ function TrustPanel() {
   );
 }
 
-/** Labeled form field wrapper */
-function Field({
-  label,
-  htmlFor,
-  children,
-}: {
-  label: string;
-  htmlFor: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div style={styles.field}>
-      <label htmlFor={htmlFor} style={styles.fieldLabel}>
-        {label}
-      </label>
-      {children}
-    </div>
-  );
-}
-
-/** Input with an icon pinned to the left */
-function InputWithIcon({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
-  return (
-    <div style={styles.inputWrap}>
-      <span style={styles.inputIcon} aria-hidden="true">{icon}</span>
-      {children}
-    </div>
-  );
-}
-
 // ---------------------------------------------------------------------------
-// Main export
+// PAGE: LoginScreen
 // ---------------------------------------------------------------------------
 export default function LoginScreen() {
   const [mode, setMode] = useState<Mode>('signin');
 
   return (
-    <div style={styles.page}>
-      <div style={styles.card}>
+    // Full-viewport dark background
+    <div className="min-h-screen flex items-center justify-center bg-[#0f0f0e] px-4 py-8">
+      <div className="flex flex-col md:flex-row w-full max-w-[860px] md:min-h-[560px] rounded-2xl border border-white/10 overflow-hidden shadow-2xl">
         <AuthForm mode={mode} onModeChange={setMode} />
         <TrustPanel />
       </div>
@@ -281,331 +340,13 @@ export default function LoginScreen() {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Inline styles (swap for Tailwind / CSS modules as you prefer)
-// ---------------------------------------------------------------------------
-const colors = {
-  bg: '#0f0f0e',
-  bgSecondary: '#1c1c1b',
-  text: '#f0ede8',
-  textMuted: '#a09d98',
-  textHint: '#6b6864',
-  border: 'rgba(255,255,255,0.10)',
-  borderHover: 'rgba(255,255,255,0.22)',
-  errorBg: '#2d1515',
-  errorBorder: '#5c2323',
-  errorText: '#f87171',
-};
-
-const styles: Record<string, React.CSSProperties> = {
-  page: {
-    minHeight: '100vh',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.bgSecondary,
-    padding: '1.5rem',
-    fontFamily: "'DM Sans', system-ui, sans-serif",
-  },
-  card: {
-    display: 'flex',
-    width: '100%',
-    maxWidth: 860,
-    minHeight: 560,
-    borderRadius: 16,
-    border: `0.5px solid ${colors.border}`,
-    overflow: 'hidden',
-    backgroundColor: colors.bg,
-    boxShadow: '0 4px 32px rgba(0,0,0,0.06)',
-  },
-  // --- Left panel ---
-  panel: {
-    flex: '0 0 52%',
-    padding: '2.75rem 2.5rem',
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'center',
-    backgroundColor: colors.bg,
-  },
-  brand: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 8,
-    fontSize: 18,
-    fontWeight: 600,
-    color: colors.text,
-    marginBottom: '2.25rem',
-    letterSpacing: '-0.3px',
-  },
-  tabRow: {
-    display: 'flex',
-    border: `0.5px solid ${colors.border}`,
-    borderRadius: 8,
-    overflow: 'hidden',
-    marginBottom: '1.75rem',
-  },
-  tab: {
-    flex: 1,
-    padding: '8px 0',
-    fontSize: 13,
-    fontWeight: 500,
-    textAlign: 'center',
-    cursor: 'pointer',
-    border: 'none',
-    background: 'transparent',
-    color: colors.textMuted,
-    transition: 'background 0.15s, color 0.15s',
-  },
-  tabActive: {
-    background: colors.text,
-    color: colors.bg,
-  },
-  formBody: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 0,
-  },
-  errorBanner: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 6,
-    fontSize: 12,
-    color: colors.errorText,
-    backgroundColor: colors.errorBg,
-    border: `0.5px solid ${colors.errorBorder}`,
-    borderRadius: 8,
-    padding: '8px 12px',
-    marginBottom: 16,
-  },
-  field: {
-    display: 'flex',
-    flexDirection: 'column',
-    marginBottom: 12,
-  },
-  fieldLabel: {
-    fontSize: 12,
-    color: colors.textMuted,
-    marginBottom: 4,
-    fontWeight: 500,
-    letterSpacing: '0.3px',
-    textTransform: 'uppercase' as const,
-  },
-  inputWrap: {
-    position: 'relative',
-  },
-  inputIcon: {
-    position: 'absolute',
-    left: 12,
-    top: '50%',
-    transform: 'translateY(-50%)',
-    color: colors.textHint,
-    display: 'flex',
-    pointerEvents: 'none',
-  },
-  input: {
-    width: '100%',
-    boxSizing: 'border-box' as const,
-    padding: '10px 12px 10px 36px',
-    fontSize: 14,
-    border: `0.5px solid ${colors.border}`,
-    borderRadius: 8,
-    color: colors.text,
-    backgroundColor: colors.bg,
-    outline: 'none',
-  },
-  submitBtn: {
-    width: '100%',
-    padding: '11px 0',
-    background: colors.text,
-    color: colors.bg,
-    border: 'none',
-    borderRadius: 8,
-    fontSize: 14,
-    fontWeight: 500,
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    marginTop: 4,
-    marginBottom: 0,
-    transition: 'opacity 0.15s',
-  },
-  submitBtnDisabled: {
-    opacity: 0.55,
-    cursor: 'not-allowed',
-  },
-  divider: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 12,
-    margin: '1.1rem 0',
-  },
-  dividerLine: {
-    flex: 1,
-    height: 0.5,
-    backgroundColor: colors.border,
-  },
-  dividerText: {
-    fontSize: 12,
-    color: colors.textHint,
-  },
-  oauthBtn: {
-    width: '100%',
-    padding: '9px 0',
-    background: 'transparent',
-    border: `0.5px solid ${colors.border}`,
-    borderRadius: 8,
-    fontSize: 13,
-    color: colors.textMuted,
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  legal: {
-    fontSize: 11,
-    color: colors.textHint,
-    textAlign: 'center',
-    marginTop: '1rem',
-    lineHeight: 1.6,
-  },
-  legalLink: {
-    color: colors.textMuted,
-    textDecoration: 'underline',
-  },
-  // --- Right panel ---
-  sidePanel: {
-    flex: '0 0 48%',
-    backgroundColor: colors.bgSecondary,
-    borderLeft: `0.5px solid ${colors.border}`,
-    padding: '2.75rem 2rem',
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'space-between',
-  },
-  sideHeadline: {
-    fontSize: 20,
-    fontWeight: 500,
-    color: colors.text,
-    lineHeight: 1.4,
-    marginBottom: '1.25rem',
-    marginTop: 0,
-  },
-  featureList: {
-    listStyle: 'none',
-    padding: 0,
-    margin: 0,
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 14,
-  },
-  featureItem: {
-    display: 'flex',
-    alignItems: 'flex-start',
-    gap: 10,
-    fontSize: 13,
-    color: colors.textMuted,
-    lineHeight: 1.5,
-  },
-  featureIcon: {
-    color: colors.text,
-    marginTop: 1,
-    flexShrink: 0,
-  },
-  trustRow: {
-    display: 'flex',
-    gap: 16,
-    paddingTop: '1.5rem',
-    borderTop: `0.5px solid ${colors.border}`,
-    flexWrap: 'wrap',
-  },
-  trustChip: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 5,
-    fontSize: 11,
-    color: colors.textHint,
-  },
-};
-
-// ---------------------------------------------------------------------------
-// Inline SVG icons (swap for lucide-react or heroicons as you prefer)
-// ---------------------------------------------------------------------------
-const LockIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <rect x="3" y="11" width="18" height="11" rx="2" />
-    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-  </svg>
-);
-const LockSmallIcon = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <rect x="3" y="11" width="18" height="11" rx="2" />
-    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-  </svg>
-);
-const LockCheckIcon = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="m8 11 3 3 5-5" />
-    <rect x="3" y="11" width="18" height="11" rx="2" />
-    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-  </svg>
-);
-const MailIcon = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <rect width="20" height="16" x="2" y="4" rx="2" />
-    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
-  </svg>
-);
-const AlertIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <circle cx="12" cy="12" r="10" />
-    <line x1="12" y1="8" x2="12" y2="12" />
-    <line x1="12" y1="16" x2="12.01" y2="16" />
-  </svg>
-);
-const ArrowRightIcon = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M5 12h14" /><path d="m12 5 7 7-7 7" />
-  </svg>
-);
-const GoogleIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
-    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
-    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05" />
-    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
-  </svg>
-);
-const ShieldLockIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-    <rect x="9" y="11" width="6" height="5" rx="1" />
-    <path d="M10 11V9a2 2 0 1 1 4 0v2" />
-  </svg>
-);
-const ChartIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-  </svg>
-);
-const HistoryIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M3 3v5h5" /><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8" />
-    <path d="M12 7v5l4 2" />
-  </svg>
-);
-const DevicesIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <rect x="2" y="3" width="15" height="11" rx="2" />
-    <path d="M17 12h2a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1" />
-    <path d="M8 21h8m-4-4v4" />
-  </svg>
-);
-const ShieldCheckIcon = () => (
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-    <path d="m9 12 2 2 4-4" />
-  </svg>
-);
+function GoogleIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05" />
+      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+    </svg>
+  );
+}
