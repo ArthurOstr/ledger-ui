@@ -43,8 +43,6 @@ function Field({
     <div className="flex flex-col gap-1.5 mb-3">
       <Label
         htmlFor={htmlFor}
-        // text-muted-foreground is a shadcn CSS variable — it automatically
-        // adapts if you switch between light/dark themes later.
         className="text-[11px] font-medium tracking-widest uppercase text-muted-foreground"
       >
         {label}
