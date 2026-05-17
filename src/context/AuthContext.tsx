@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import apiClient from '../api/client';
 
@@ -16,6 +16,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
 
   const isAuthenticated = !!token;
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const urlToken = params.get('token');
+
+    if (urlToken) {
+      setToken(urlToken);
+      localStorage.setItem('token', urlToken);
+
+      window.history.replaceState({}, document.title, '/');
+    }
+  }, []);
 
   const login = async (email: string, password: string) => {
     try {

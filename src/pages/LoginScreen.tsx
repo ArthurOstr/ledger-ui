@@ -14,6 +14,8 @@ import {
   TrendingUp,    // feature: spending tracking
   History,       // feature: audit log
   Monitor,       // feature: multi-device
+  Eye,           // visiable password
+  EyeOff,        // hidden password
 } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
@@ -43,11 +45,44 @@ function Field({
     <div className="flex flex-col gap-1.5 mb-3">
       <Label
         htmlFor={htmlFor}
-        className="text-[11px] font-medium tracking-widest uppercase text-muted-foreground"
+        className="text-[11px] font-medium tracking-widest uppercase text-[#f0ede8]"
       >
         {label}
       </Label>
       {children}
+    </div>
+  );
+}
+// ---------------------------------------------------------------------------
+// COMPONENT: PasswordInput
+// ---------------------------------------------------------------------------
+function PasswordInput(props: React.ComponentProps<typeof Input>) {
+  const [show, setShow] = useState(false);
+
+  return (
+    <div className="relative">
+      {/* Left Icon (Lock) */}
+      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none flex">
+        <Lock size={15} />
+      </span>
+
+      <Input
+        {...props}
+        type={show ? "text" : "password"}
+        // pl-9 makes room for the lock, pr-10 makes room for the eye icon
+        className={`pl-9 pr-10 bg-[#0f0f0e] border-white/10 text-[#f0ede8] placeholder:text-[#6b6864] focus-visible:ring-white/20 focus-visible:border-white/25 ${props.className || ''}`}
+      />
+
+      {/* Right Action (Toggle Visibility) */}
+      <button
+        type="button"
+        onClick={() => setShow((prev) => !prev)}
+        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6b6864] hover:text-[#f0ede8] transition-colors"
+        aria-label={show ? "Hide password" : "Show password"}
+        tabIndex={-1} // Prevents the user from accidentally tabbing into the eye icon while typing
+      >
+        {show ? <EyeOff size={15} /> : <Eye size={15} />}
+      </button>
     </div>
   );
 }
@@ -64,7 +99,6 @@ function InputWithIcon({
 }) {
   return (
     <div className="relative">
-      {/* Icon — pointer-events-none so clicks pass through to the input */}
       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none flex">
         {icon}
       </span>
@@ -201,37 +235,33 @@ function AuthForm({
 
         {/* ── Password field ─────────────────────────────────────────── */}
         <Field label="Password" htmlFor={passwordId}>
-          <InputWithIcon icon={<Lock size={15} />}>
-            <Input
-              id={passwordId}
-              type="password"
-              required
-              placeholder="••••••••"
-              value={form.password}
-              onChange={set('password')}
-              autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
-              minLength={8}
-              className="pl-9 bg-[#0f0f0e] border-white/10 text-[#f0ede8] placeholder:text-[#6b6864] focus-visible:ring-white/20 focus-visible:border-white/25"
-            />
-          </InputWithIcon>
+          <PasswordInput
+            id={passwordId}
+            type="password"
+            required
+            placeholder="••••••••"
+            value={form.password}
+            onChange={set('password')}
+            autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
+            minLength={8}
+            className="pl-9 bg-[#0f0f0e] border-white/10 text-[#f0ede8] placeholder:text-[#6b6864] focus-visible:ring-white/20 focus-visible:border-white/25"
+          />
         </Field>
 
         {/* ── Confirm password — register mode only ──────────────────── */}
         {mode === 'register' && (
           <Field label="Confirm password" htmlFor={confirmId}>
-            <InputWithIcon icon={<Lock size={15} />}>
-              <Input
-                id={confirmId}
-                type="password"
-                required
-                placeholder="••••••••"
-                value={form.confirm}
-                onChange={set('confirm')}
-                autoComplete="new-password"
-                minLength={8}
-                className="pl-9 bg-[#0f0f0e] border-white/10 text-[#f0ede8] placeholder:text-[#6b6864] focus-visible:ring-white/20 focus-visible:border-white/25"
-              />
-            </InputWithIcon>
+            <PasswordInput
+              id={confirmId}
+              type="password"
+              required
+              placeholder="••••••••"
+              value={form.confirm}
+              onChange={set('confirm')}
+              autoComplete="new-password"
+              minLength={8}
+              className="pl-9 bg-[#0f0f0e] border-white/10 text-[#f0ede8] placeholder:text-[#6b6864] focus-visible:ring-white/20 focus-visible:border-white/25"
+            />
           </Field>
         )}
 
@@ -258,7 +288,7 @@ function AuthForm({
         <Button
           type="button"
           variant="outline"
-          onClick={() => { window.location.href = `${import.meta.env.VITE_API_URL}/auth/google`; }}
+          onClick={() => { window.location.href = `${import.meta.env.VITE_API_URL}/google_auth/google`; }}
           className="w-full border-white/10 text-[#a09d98] bg-transparent hover:bg-white/5 hover:text-[#f0ede8] hover:border-white/20 transition-colors"
         >
           <GoogleIcon />
