@@ -3,30 +3,34 @@ import type { ReactNode } from 'react';
 import apiClient from '../api/client';
 
 interface AuthContextType {
-  token: string | null;
   isAuthenticated: boolean;
+  isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
 
-  const isAuthenticated = !!token;
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  const verifySession = async () => {
+    try {
+      // browser attaches cookie HttpOnly here
+      await apiClient.get('/users/me');
+      setIsAuthenticated(true)
+    } catch (error) {
+      setIsAuthenticated(false);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const urlToken = params.get('token');
-
-    if (urlToken) {
-      setToken(urlToken);
-      localStorage.setItem('token', urlToken);
-
-      window.history.replaceState({}, document.title, '/');
-    }
+    verifySession();
   }, []);
 
   const login = async (email: string, password: string) => {
@@ -36,28 +40,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       formData.append('username', email);
       formData.append('password', password);
 
-      const response = await apiClient.post('/users/login', formData, {
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      await apiClient.post('/users/login', formData, {
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
       });
 
-      const newToken = response.data.access_token;
-
-      // Saving to memory
-      setToken(newToken);
-      localStorage.setItem('token', newToken);
+      setIsAuthenticated(true);
     } catch (error) {
-      console.error("Login failed:", error);
-      throw error;
+      console.error("Login failed", error)
+    throw error;
     }
   };
 
   const register = async (email: string, password: string) => {
     try {
       await apiClient.post('/users/register', {
-        email: email,
-        password: password
+        email, password
       });
-
       await login(email, password);
     } catch (error) {
       console.error("Registration failed:", error)
@@ -65,13 +63,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const logout = () => {
-    setToken(null);
-    localStorage.removeItem('token');
+  const logout = async () => {
+    try {
+    await apiClient.post('/users/logout');
+  } catch (error) {
+  console.error("Logout failed:", error);
+  } finally {
+  setIsAuthenticated(false);
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ token, isAuthenticated, register, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, isLoading, register, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
