@@ -8,8 +8,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Badge }       from '@/components/ui/badge';
-import { ScrollArea }  from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -37,7 +37,7 @@ const categoryVariant = (
   if (!category) return 'outline';
   const lower = category.toLowerCase();
   if (['food', 'groceries', 'dining'].some((k) => lower.includes(k))) return 'default';
-  if (['transport', 'fuel', 'transit'].some((k) => lower.includes(k)))  return 'secondary';
+  if (['transport', 'fuel', 'transit'].some((k) => lower.includes(k))) return 'secondary';
   return 'outline';
 };
 

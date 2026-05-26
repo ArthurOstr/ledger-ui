@@ -13,3 +13,15 @@ export interface Transaction {
   transaction_amount: number;
   created_at: string;
 }
+
+export interface UploadResponse {
+  filename?: string;
+  message: string;
+  job_id: string;
+  status: string;
+}
+
+export interface StatusResponse {
+  job_id: string;
+  status: string;
+}
