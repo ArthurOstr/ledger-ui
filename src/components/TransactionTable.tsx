@@ -32,7 +32,7 @@ const formatAmount = (amount: number, currency: string) => {
 
 // Maps category strings to a Badge color variant.
 const categoryVariant = (
-  category: string | undefined
+  category: string | null | undefined
 ): 'default' | 'secondary' | 'outline' => {
   if (!category) return 'outline';
   const lower = category.toLowerCase();
@@ -97,7 +97,7 @@ export default function TransactionTable({ transactions }: Props) {
 
               <TableCell
                 className="text-[#f0ede8] text-sm max-w-[240px] truncate"
-                title={tx.description} // full text on hover via native tooltip
+                title={tx.description ?? undefined} // full text on hover via native tooltip
               >
                 {tx.description}
               </TableCell>
