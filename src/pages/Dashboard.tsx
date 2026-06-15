@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { getTransactions } from '../api/client';
-import type { Transaction } from '../types';
+import type { Transaction } from '@/types';
 import { useAuth } from '../context/AuthContext';
 
 import TransactionTable from '../components/TransactionTable';
