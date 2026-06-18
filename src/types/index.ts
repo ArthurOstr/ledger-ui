@@ -24,4 +24,6 @@ export interface UploadResponse {
 export interface StatusResponse {
   job_id: string;
   status: string;
+  inserted_count?: number;
+  error?: string;
 }
