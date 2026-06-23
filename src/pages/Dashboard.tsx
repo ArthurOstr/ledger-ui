@@ -143,8 +143,7 @@ export default function Dashboard() {
       const data = await getTransactions();
       setTransactions(data);
     } catch (err) {
-      setError('Failed to reach the vault. Is the backend server running?');
-      // Remove console.error before shipping to production.
+      setError('Unable to load transactions. Please try again later.');
       console.error(err);
     } finally {
       setLoading(false);

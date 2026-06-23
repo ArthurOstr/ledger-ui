@@ -86,7 +86,10 @@ export default function TransactionTable({ transactions }: Props) {
 
   // Pagination engine
 
-  const totalPages = Math.max(1, Math.ceil(filteredTransactions.length / ROWS_PER_PAGE));
+  const totalPages = useMemo(
+      () => Math.max(1, Math.ceil(filteredTransactions.length / ROWS_PER_PAGE)),
+    [filteredTransactions.length]
+  );
 
   const paginatedTransactions = useMemo(() => {
     const startIndex = (currentPage - 1) * ROWS_PER_PAGE;
@@ -102,7 +105,7 @@ export default function TransactionTable({ transactions }: Props) {
   const handleClearSearch = () => {
     setSearchQuery('');
     setCurrentPage(1);
-  }
+  };
 
   if (transactions.length === 0) {
     return <EmptyState />;
@@ -115,7 +118,7 @@ return (
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-[#6b6864]" />
           <Input
-            placeholder="Search descriptions or categories..."
+            placeholder="Search transactions..."
             value={searchQuery}
             onChange={handleSearch}
             className="pl-9 pr-9 bg-[#1c1c1b] border-white/10 text-[#f0ede8] focus-visible:ring-1 focus-visible:ring-white/20"
@@ -130,9 +133,9 @@ return (
             </button>
           )}
         </div>
-        <div className="text-xs text-[#6b6864]">
-          Showing {filteredTransactions.length} results
-        </div>
+          <div className="text-xs text-[#6b6864]">
+           {filteredTransactions.length} result{filteredTransactions.length !== 1 ? 's' : ''} found
+         </div>
       </div>
 
       {/* The Data Grid */}
