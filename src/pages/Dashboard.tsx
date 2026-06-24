@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 
 import TransactionTable from '../components/TransactionTable';
 import FileUpload       from '../components/FileUpload';
+import RuleSheet        from '../components/RuleSheet';
 
 import {
   Card,
@@ -167,6 +168,12 @@ export default function Dashboard() {
             Live data from the PostgreSQL engine
           </p>
         </div>
+
+        <div className="flex items-center gap-3"/>
+          <RuleSheet
+            transactions={transactions}
+            onRuleCreated={fetchVaultData}
+          />
 
         <div className="flex items-center gap-3">
           <FileUpload onUploadSuccess={fetchVaultData} />

@@ -27,3 +27,17 @@ export interface StatusResponse {
   inserted_count?: number;
   error?: string;
 }
+
+export interface CategoryRuleCreate {
+  keyword: string;
+  assigned_category: string;
+  is_active: boolean;
+}
+
+export interface CategoryRuleResponse {
+  id: number;
+  owner_id: number;
+  keyword: string;
+  assigned_category: string;
+  is_active: boolean;
+}
