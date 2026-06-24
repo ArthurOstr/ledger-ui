@@ -57,7 +57,7 @@ function RuleForm({ transactions, onSubmit, onRuleCreated }: RuleFormProps) {
   const suggestedCategories = useMemo(() => {
     const populated = transactions
       .map((tx) => tx.category?.trim())
-      .filter((cat): cat is string => Boolean(cat) && cat.length > 0);
+      .filter((cat): cat is string => typeof cat === 'string' && cat.length > 0);
 
     return Array.from(new Set(populated)).sort();
   }, [transactions]);
