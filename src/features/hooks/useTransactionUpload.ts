@@ -27,9 +27,11 @@ export function useTransactionUpload(onUploadSuccess: () => void) {
       setJobId(response.job_id);
       setStatus('POLLING');
 
-    } catch (err: any) {
+    }  catch (err: unknown) {
       setStatus('FAILED');
-      setErrorMessage(err.response?.data?.detail || 'Failed to reach service');
+      const message =
+          err instanceof Error ? err.message : 'Failed to reach service';
+      setErrorMessage(message);
     }
   };
 
@@ -61,5 +63,11 @@ export function useTransactionUpload(onUploadSuccess: () => void) {
     return () => stopPolling();
   }, [status, jobId, onUploadSuccess]);
 
-  return { uploadFile, status, errorMessage, reset: () => setStatus('IDLE') };
+  return { uploadFile, status, errorMessage,
+    reset: () => {
+    setStatus('IDLE');
+    setJobId(null);
+    setErrorMessage(null);
+    }
+  }
 }
