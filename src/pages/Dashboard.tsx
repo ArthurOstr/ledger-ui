@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { getTransactions } from '../api/client';
 import type { Transaction } from '@/types';
 import { useAuth } from '../context/AuthContext';
@@ -29,6 +29,10 @@ import {
 // Helpers
 // ---------------------------------------------------------------------------
 const formatAmount = (amount: number, currency = 'UAH') => {
+  const num = Number(amount);
+
+  if (isNaN(num)) return `0.00${currency}`;
+
   try {
     return new Intl.NumberFormat('uk-UA', {
       style: 'currency',
@@ -46,14 +50,21 @@ function summarise(transactions: Transaction[]) {
   let expenses = 0;
 
   for (const tx of transactions) {
-    if (tx.amount > 0) income   += tx.amount;
-    else               expenses += tx.amount; // negative, so net goes down
+    const amt = Number(tx.amount) || 0;
+
+    if (isNaN(amt)) continue;
+
+    if (amt > 0) {
+      income += amt;
+    } else {
+      expenses += amt;
+    }
   }
 
   return {
     income,
     expenses,
-    net: income + expenses, // expenses are already negative
+    net: income + expenses,
     currency,
     count: transactions.length,
   };
@@ -155,7 +166,7 @@ export default function Dashboard() {
     fetchVaultData();
   }, [fetchVaultData]);
 
-  const summary = summarise(transactions);
+  const summary = useMemo(() => summarise(transactions), [transactions]);
 
   return (
     <div className="min-h-screen bg-[#0f0f0e] text-[#f0ede8]">

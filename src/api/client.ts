@@ -1,7 +1,7 @@
 import axios from 'axios';
 import type { Transaction, UploadResponse, StatusResponse, CategoryRuleResponse, CategoryRuleCreate } from '@/types';
 
-const API_BASE_URL = import.meta.env.PROD ? '/api' : import.meta.env.VITE_API_URL;
+const API_BASE_URL = import.meta.env.PROD ? import.meta.env.VITE_API_URL: '/api';
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
