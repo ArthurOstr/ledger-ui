@@ -162,6 +162,35 @@ export default function Dashboard() {
     }
   }, []);
 
+  const handleUploadSuccess = useCallback(() => {
+    setLoading(true);
+    const previousCount = transactions.length;
+    let attempts = 0;
+    const maxAttempts = 8;
+
+    const pollForNewData = async () => {
+      attempts++;
+      try {
+        const data = await getTransactions();
+
+        if (data.length > previousCount) {
+          setTransactions(data);
+          setLoading(false);
+          return;
+        }
+        if (attempts >= maxAttempts) {
+          setTransactions(data);
+          setLoading(false);
+          return;
+        }
+      } catch (err) {
+        console.error("Polling failed during background processing", err);
+      }
+      setTimeout(pollForNewData, 1500);
+    };
+    setTimeout(pollForNewData, 1000);
+  }, [transactions.length]);
+
   useEffect(() => {
     fetchVaultData();
   }, [fetchVaultData]);
@@ -187,7 +216,7 @@ export default function Dashboard() {
           />
 
         <div className="flex items-center gap-3">
-          <FileUpload onUploadSuccess={fetchVaultData} />
+          <FileUpload onUploadSuccess={handleUploadSuccess} />
           <Button
             variant="ghost"
             onClick={logout}
