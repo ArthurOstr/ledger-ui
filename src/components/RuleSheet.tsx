@@ -1,4 +1,4 @@
-// src/components/RulesSheet.tsx
+
 import { useState, useMemo } from 'react';
 import { useRules } from '../features/hooks/useRules';
 import type { Transaction, CategoryRuleResponse } from '@/types';
@@ -114,6 +114,7 @@ function RuleForm({ transactions, onSubmit, onRuleCreated }: RuleFormProps) {
           <Popover open={openCombobox} onOpenChange={setOpenCombobox} modal={true}>
             <PopoverTrigger asChild>
               <Button
+                type="button"
                 variant="outline"
                 role="combobox"
                 aria-expanded={openCombobox}
@@ -191,6 +192,7 @@ function RuleItem({ rule, onDelete }: { rule: CategoryRuleResponse; onDelete: (i
         onClick={() => onDelete(rule.id)}
         className="text-[#6b6864] hover:text-red-400 hover:bg-red-950/30 h-7 w-7 p-0 shrink-0"
         title="Delete rule"
+        aria-label={`Delete rule for ${rule.keyword}`}
       >
         <Trash2 className="h-3.5 w-3.5" />
       </Button>
