@@ -44,30 +44,29 @@ const formatAmount = (amount: number, currency = 'UAH') => {
   }
 };
 
-function summarise(transactions: Transaction[]) {
-  const currency = transactions[0]?.currency ?? 'UAH';
-  let income   = 0;
-  let expenses = 0;
-
+function summariseByCurrency(transactions: Transaction[]) {
+  const grouped: Record<string, { income: number; expenses: number;net: number; count: number }> = {};
+  
   for (const tx of transactions) {
+    const currency = ( tx.currency || 'UAH').trim().toUpperCase();
     const amt = Number(tx.amount) || 0;
 
     if (isNaN(amt)) continue;
 
-    if (amt > 0) {
-      income += amt;
-    } else {
-      expenses += amt;
+    if (!grouped[currency]) {
+      grouped[currency] = { income: 0, expenses: 0, net: 0, count: 0 };
     }
+    grouped[currency].count += 1;
+
+    if (amt > 0) {
+      grouped[currency].income += amt;
+    } else {
+      grouped[currency].expenses += amt;
+    }
+    grouped[currency].net = grouped[currency].income + grouped[currency].expenses;
   }
 
-  return {
-    income,
-    expenses,
-    net: income + expenses,
-    currency,
-    count: transactions.length,
-  };
+  return grouped;
 }
 
 // ---------------------------------------------------------------------------
@@ -195,7 +194,7 @@ export default function Dashboard() {
     fetchVaultData();
   }, [fetchVaultData]);
 
-  const summary = useMemo(() => summarise(transactions), [transactions]);
+  const summary = useMemo(() => summariseByCurrency(transactions), [transactions]);
 
   return (
     <div className="min-h-screen bg-[#0f0f0e] text-[#f0ede8]">
@@ -209,13 +208,11 @@ export default function Dashboard() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3"/>
+        <div className="flex items-center gap-3">
           <RuleSheet
             transactions={transactions}
             onRuleCreated={fetchVaultData}
           />
-
-        <div className="flex items-center gap-3">
           <FileUpload onUploadSuccess={handleUploadSuccess} />
           <Button
             variant="ghost"
@@ -229,10 +226,12 @@ export default function Dashboard() {
       </header>
 
       {/* ── Main content ─────────────────────────────────────────────── */}
-      <main className="px-6 py-6 space-y-6">
+      <main className="px-6 py-6 space-y-8">
 
         {/* Loading state — skeleton layout */}
         {loading && <LoadingSkeleton />}
+
+        {/* Error state — alert banner */}
         {error && !loading && (
           <Alert
             variant="destructive"
@@ -246,34 +245,50 @@ export default function Dashboard() {
         )}
 
         {/* Happy path — summary cards + table */}
-        {!loading && !error && (
+{!loading && !error && (
           <>
-            {/* ── Summary cards ──────────────────────────────────────── */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <SummaryCard
-                title="Total income"
-                value={formatAmount(summary.income, summary.currency)}
-                icon={<TrendingUp size={16} />}
-                positive={true}
-              />
-              <SummaryCard
-                title="Total expenses"
-                value={formatAmount(summary.expenses, summary.currency)}
-                icon={<TrendingDown size={16} />}
-                positive={false}
-              />
-              <SummaryCard
-                title="Net"
-                value={formatAmount(summary.net, summary.currency)}
-                icon={<Wallet size={16} />}
-                positive={null}
-              />
+            {/* ── Summary cards (Dynamically Generated per Currency) ── */}
+            <div className="space-y-8">
+              {Object.entries(summary).map(([currency, data]) => (
+                <div key={currency} className="space-y-4">
+                  {/* Currency Vault Header */}
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-sm font-semibold text-[#f0ede8] bg-white/5 px-3 py-1 rounded-md border border-white/10 w-fit">
+                      {currency} Vault
+                    </h2>
+                    <p className="text-xs text-[#6b6864]">
+                      {data.count} transaction{data.count !== 1 ? 's' : ''}
+                    </p>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <SummaryCard
+                      title="Total income"
+                      value={formatAmount(data.income, currency)}
+                      icon={<TrendingUp size={16} />}
+                      positive={true}
+                    />
+                    <SummaryCard
+                      title="Total expenses"
+                      value={formatAmount(data.expenses, currency)}
+                      icon={<TrendingDown size={16} />}
+                      positive={false}
+                    />
+                    <SummaryCard
+                      title="Net"
+                      value={formatAmount(data.net, currency)}
+                      icon={<Wallet size={16} />}
+                      positive={null}
+                    />
+                  </div>
+                </div>
+              ))}
             </div>
 
-            {/* ── Transaction count ───────────────────────────────────── */}
+            {/* ── Total Data Loaded ───────────────────────────────────── */}
             {transactions.length > 0 && (
-              <p className="text-xs text-[#6b6864]">
-                {summary.count} transaction{summary.count !== 1 ? 's' : ''} loaded
+              <p className="text-xs text-[#6b6864] pt-4">
+                {transactions.length} total transaction{transactions.length !== 1 ? 's' : ''} loaded from database
               </p>
             )}
 
