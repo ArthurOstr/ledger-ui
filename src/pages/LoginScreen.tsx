@@ -14,7 +14,7 @@ import {
   TrendingUp,    // feature: spending tracking
   History,       // feature: audit log
   Monitor,       // feature: multi-device
-  Eye,           // visiable password
+  Eye,           // visible password
   EyeOff,        // hidden password
 } from 'lucide-react';
 
