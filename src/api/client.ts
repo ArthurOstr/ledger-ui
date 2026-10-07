@@ -6,12 +6,20 @@ const API_BASE_URL = import.meta.env.PROD ? import.meta.env.VITE_API_URL: '/api'
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
   withCredentials: true,
+  headers: {
+    'Content-Type': 'application/json',
+  },
 });
 
 // Vault and Ingestion Operations
 
-export const getTransactions = async (): Promise<Transaction[]> => {
-  const response = await apiClient.get(`/transactions`);
+export interface GetTransactionParams {
+  limit?: number; 
+  offset?: number;
+}
+
+export const getTransactions = async (params?: GetTransactionParams): Promise<Transaction[]> => {
+  const response = await apiClient.get<Transaction[]>(`/transactions`, { params });
   return response.data;
 };
 
