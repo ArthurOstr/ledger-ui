@@ -7,7 +7,7 @@ interface Props {
 }
 
 export default function FileUpload({ onUploadSuccess }: Props) {
-  const { uploadFile, status, errorMessage, reset } = useTransactionUpload(onUploadSuccess);
+  const { uploadFile, status, errorMessage, insertedCount, reset } = useTransactionUpload(onUploadSuccess);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -34,7 +34,7 @@ export default function FileUpload({ onUploadSuccess }: Props) {
   const handleDragLeave = () => setIsDragging(false);
 
   // Status mapping for visual components
-const renderContent = () => {
+  const renderContent = () => {
     switch (status) {
       case 'UPLOADING':
       case 'POLLING':
@@ -50,7 +50,9 @@ const renderContent = () => {
         return (
           <div className="flex flex-col items-center text-emerald-400">
             <CheckCircle className="h-10 w-10 mb-4" />
-            <p className="text-sm font-medium text-[#f0ede8]">Vault insertion complete.</p>
+            <p className="text-sm font-medium text-[#f0ede8]">
+              Vault insertion complete{insertedCount !== null ? ` — ${insertedCount} rows added.` : '.'}
+            </p>
             <button
               onClick={reset}
               className="mt-4 text-xs text-[#a09d98] underline hover:text-[#f0ede8] transition-colors"
@@ -100,7 +102,7 @@ const renderContent = () => {
       onDrop={handleDrop}
       className={`
         relative w-full max-w-md p-8 border-2 border-dashed rounded-lg flex justify-center items-center transition-all duration-200 ease-in-out
-        ${isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'}
+        ${isDragging ? 'border-[#f0ede8] bg-white/5' : 'border-white/10 hover:border-white/20 hover:bg-white/5'}
         ${(status === 'UPLOADING' || status === 'POLLING')
           ? 'cursor-wait pointer-events-none opacity-80'
           : 'cursor-pointer'}

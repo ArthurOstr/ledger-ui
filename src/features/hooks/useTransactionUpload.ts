@@ -6,6 +6,7 @@ export type UploadState = 'IDLE' | 'UPLOADING' | 'POLLING' | 'SUCCESS' | 'FAILED
 export function useTransactionUpload(onUploadSuccess: () => void) {
   const [status, setStatus] = useState<UploadState>('IDLE');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [insertedCount, setInsertedCount] = useState<number | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
 
   const pollingIntervalRef = useRef<number | null>(null);
@@ -27,7 +28,7 @@ export function useTransactionUpload(onUploadSuccess: () => void) {
       setJobId(response.job_id);
       setStatus('POLLING');
 
-    }  catch (err: unknown) {
+    } catch (err: unknown) {
       setStatus('FAILED');
       const message =
           err instanceof Error ? err.message : 'Failed to reach service';
@@ -42,20 +43,22 @@ export function useTransactionUpload(onUploadSuccess: () => void) {
       try {
         const data = await checkUploadStatus(jobId);
 
-        if (data.status === 'SUCCESS' || data.status === 'complete') {
+        if (data.status === 'completed') {
           stopPolling();
+          setInsertedCount(data.inserted_count);
           setStatus('SUCCESS');
           onUploadSuccess();
         }
-        else if (data.status === 'FAILED' || data.status === 'failed_or_expired') {
+        else if (data.status === 'failed') {
           stopPolling();
           setStatus('FAILED');
           setErrorMessage(data.error || 'The background worker failed to process the file');
         }
+        // 'queued' | 'in_progress' → keep polling
       } catch (error) {
         stopPolling();
         setStatus('FAILED');
-        setErrorMessage('Lost connection to the polling server')
+        setErrorMessage('Lost connection to the polling server');
       }
     };
 
@@ -63,11 +66,16 @@ export function useTransactionUpload(onUploadSuccess: () => void) {
     return () => stopPolling();
   }, [status, jobId, onUploadSuccess]);
 
-  return { uploadFile, status, errorMessage,
+  return {
+    uploadFile,
+    status,
+    errorMessage,
+    insertedCount,
     reset: () => {
-    setStatus('IDLE');
-    setJobId(null);
-    setErrorMessage(null);
+      setStatus('IDLE');
+      setJobId(null);
+      setErrorMessage(null);
+      setInsertedCount(null);
     }
-  }
+  };
 }
