@@ -1,5 +1,5 @@
 // COMMON LITERALS
-export type CurrencyCode = 'USD' | 'EUR' | 'UAH' | string;
+export type CurrencyCode = 'USD' | 'EUR' | 'UAH' | 'PLN' | (string & {});
 
 // Ingestion and Pipeline Status
 export type IngestionStatus = 'queued';
@@ -50,16 +50,16 @@ export type StatusResponse = QueuedJobStatusResponse | InProgressJobStatusRespon
 export interface Transaction {
   id: number;
   date: string;
-  bank: 'monobank' | 'privatbank' | string;
+  bank: 'monobank' | 'privatbank' | (string & {});
   category: string | null;
   card: string | null;
   description: string | null;
   amount: number;
   currency: CurrencyCode;
-  balance_after: number;
+  balance_after: number | null;
   balance_currency: CurrencyCode;
   transaction_currency: CurrencyCode;
-  transaction_amount: number;
+  transaction_amount: number | null;
   hash_id: string;
   created_at: string;
 }

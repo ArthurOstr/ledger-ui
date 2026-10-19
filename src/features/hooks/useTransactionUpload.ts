@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { uploadLedger, checkUploadStatus } from '@/api/client';
+import { getApiError } from '@/api/errors';
 
 export type UploadState = 'IDLE' | 'UPLOADING' | 'POLLING' | 'SUCCESS' | 'FAILED';
 
@@ -30,9 +31,7 @@ export function useTransactionUpload(onUploadSuccess: () => void) {
 
     } catch (err: unknown) {
       setStatus('FAILED');
-      const message =
-          err instanceof Error ? err.message : 'Failed to reach service';
-      setErrorMessage(message);
+      setErrorMessage(getApiError(err).message);
     }
   };
 
@@ -72,6 +71,7 @@ export function useTransactionUpload(onUploadSuccess: () => void) {
     errorMessage,
     insertedCount,
     reset: () => {
+      stopPolling();
       setStatus('IDLE');
       setJobId(null);
       setErrorMessage(null);

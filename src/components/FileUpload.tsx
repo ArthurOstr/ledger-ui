@@ -6,14 +6,28 @@ interface Props {
   onUploadSuccess: () => void;
 }
 
+// Local file validation shared by both the file input and drag-and-drop.
+const isValidLedgerFile = (file: File): boolean => {
+  const name = file.name.toLowerCase();
+  return name.endsWith('.xlsx') || name.endsWith('.xls');
+};
+
 export default function FileUpload({ onUploadSuccess }: Props) {
   const { uploadFile, status, errorMessage, insertedCount, reset } = useTransactionUpload(onUploadSuccess);
   const [isDragging, setIsDragging] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) uploadFile(file);
+    if (file) {
+      if (isValidLedgerFile(file)) {
+        setValidationError(null);
+        uploadFile(file);
+      } else {
+        setValidationError(`"${file.name}" is not supported. Please upload a .XLSX or .XLS ledger export.`);
+      }
+    }
     if (fileInputRef.current) fileInputRef.current.value = ''; // reset input
   };
 
@@ -21,8 +35,13 @@ export default function FileUpload({ onUploadSuccess }: Props) {
     event.preventDefault();
     setIsDragging(false);
     const file = event.dataTransfer.files?.[0];
-    if (file && (file.name.endsWith('.xlsx') || file.name.endsWith('.xls'))) {
-      uploadFile(file);
+    if (file) {
+      if (isValidLedgerFile(file)) {
+        setValidationError(null);
+        uploadFile(file);
+      } else {
+        setValidationError(`"${file.name}" is not supported. Please drop a .XLSX or .XLS ledger export.`);
+      }
     }
   };
 
@@ -51,7 +70,9 @@ export default function FileUpload({ onUploadSuccess }: Props) {
           <div className="flex flex-col items-center text-emerald-400">
             <CheckCircle className="h-10 w-10 mb-4" />
             <p className="text-sm font-medium text-[#f0ede8]">
-              Vault insertion complete{insertedCount !== null ? ` — ${insertedCount} rows added.` : '.'}
+              {insertedCount === 0
+                ? 'Statement processed — all transactions already recorded (0 new rows).'
+                : `Vault insertion complete — ${insertedCount} rows added.`}
             </p>
             <button
               onClick={reset}
@@ -89,6 +110,9 @@ export default function FileUpload({ onUploadSuccess }: Props) {
               <span className="text-[#a09d98]"> or drag and drop</span>
             </p>
             <p className="text-xs text-[#6b6864] mt-1">.XLSX or .XLS (Ledger Export)</p>
+            {validationError && (
+              <p className="text-xs text-red-400 mt-3 max-w-xs text-center">{validationError}</p>
+            )}
           </div>
         );
     }

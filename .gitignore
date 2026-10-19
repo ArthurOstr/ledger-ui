@@ -27,3 +27,5 @@ dist-ssr
 *.sw?
 .aider*
 CONVENTIONS.md
+frontend_notes.md
+frontend_notes_dashboard.md

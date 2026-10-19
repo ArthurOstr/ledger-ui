@@ -37,7 +37,7 @@ export const uploadLedger = async (file: File): Promise<UploadResponse> => {
 
 export const checkUploadStatus = async (jobId: string): Promise<StatusResponse> => {
   const response = await apiClient.get(`/transactions/status/${jobId}`);
-  return response.data;
+  return response.data as Promise<StatusResponse>;
 };
 
 // Categorization Rules Operations

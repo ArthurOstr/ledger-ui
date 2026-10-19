@@ -19,27 +19,37 @@ import { Search, ChevronLeft, ChevronRight, X } from 'lucide-react';
 // ---------------------------------------------------------------------------
 
 // Intl.NumberFormat formats amounts correctly per locale.
-const formatAmount = (amount: number, currency: string) => {
+// Accepts raw strings/nulls from the backend and never crashes on them.
+const formatAmount = (
+  amount: number | string | null | undefined,
+  currency: string = 'UAH'
+) => {
+  if (amount === null || amount === undefined || amount === '') return '—';
+
+  const num = Number(amount);
+  if (isNaN(num)) return '—';
+
   try {
     return new Intl.NumberFormat('uk-UA', {
       style: 'currency',
       currency,
       minimumFractionDigits: 2,
-    }).format(amount);
+    }).format(num);
   } catch {
     // If currency code is unknown (e.g. custom bank code), fall back to plain number
-    return `${amount.toFixed(2)} ${currency}`;
+    return `${num.toFixed(2)} ${currency}`;
   }
 };
 
 // Maps category strings to a Badge color variant.
+// Matches both English and Ukrainian category substrings.
 const categoryVariant = (
   category: string | null | undefined
 ): 'default' | 'secondary' | 'outline' => {
   if (!category) return 'outline';
   const lower = category.toLowerCase();
-  if (['food', 'groceries', 'dining'].some((k) => lower.includes(k))) return 'default';
-  if (['transport', 'fuel', 'transit'].some((k) => lower.includes(k))) return 'secondary';
+  if (['food', 'groceries', 'dining', 'продукт', 'супермаркет', 'кафе', 'ресторан'].some((k) => lower.includes(k))) return 'default';
+  if (['transport', 'fuel', 'transit', 'транспорт', 'авто', 'аптек', 'медиц'].some((k) => lower.includes(k))) return 'secondary';
   return 'outline';
 };
 
