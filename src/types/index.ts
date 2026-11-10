@@ -1,6 +1,10 @@
 // COMMON LITERALS
 export type CurrencyCode = 'USD' | 'EUR' | 'UAH' | 'PLN' | (string & {});
 
+// Bank and Scope types
+export type BankSource = 'monobank' | 'privatbank' | (string & {});
+export type BankScope = 'ALL' | 'monobank' | 'privatbank';
+
 // Ingestion and Pipeline Status
 export type IngestionStatus = 'queued';
 
@@ -78,4 +82,39 @@ export interface CategoryRuleResponse {
   keyword: string;
   assigned_category: string;
   is_active: boolean;
+}
+
+// DASHBOARD AND VAULT ANALYTICS
+
+export interface CardVault {
+  bank: BankSource;
+  card: string;
+  currency: CurrencyCode;
+  latestBalance: number | null;
+  lastActiveDate: string;
+}
+
+export interface FinancialSummary {
+  netWorthUAH: number;
+  totalIncome: number;
+  totalExpenses: number;
+  savingsRate: number;
+  vaults: CardVault[];
+  foreignVaults: Record<string, number>;
+}
+
+// Recharts visual analytics
+
+export interface BalancePoint {
+  date: string;
+  timestamp: number;
+  balance: number;
+  card?: string;
+  bank?: string;
+}
+
+export interface CategorySpending {
+  category: string;
+  amount: number;
+  percentage: number;
 }
