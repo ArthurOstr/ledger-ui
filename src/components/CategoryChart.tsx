@@ -9,11 +9,6 @@ import {
 import { PieChart as PieChartIcon } from 'lucide-react';
 import type { CategorySpending } from '@/types';
 
-/** Chart slice with the optional transaction count added by the analytics layer. */
-interface CategorySlice extends CategorySpending {
-  count?: number;
-}
-
 interface CategoryChartProps {
   data: CategorySpending[];
   title?: string;
@@ -53,8 +48,8 @@ function formatExactUAH(value: number): string {
  * Keeps the donut readable: when more than 7 categories are present, only the
  * top 6 stay standalone and everything else collapses into 'Інше (Other)'.
  */
-function buildSlices(data: CategorySpending[]): CategorySlice[] {
-  const sorted: CategorySlice[] = [...data].sort(
+function buildSlices(data: CategorySpending[]): CategorySpending[] {
+  const sorted: CategorySpending[] = [...data].sort(
     (a, b) => (Number(b.amount) || 0) - (Number(a.amount) || 0),
   );
 
@@ -69,7 +64,7 @@ function buildSlices(data: CategorySpending[]): CategorySlice[] {
   const otherCount = rest.reduce((sum, slice) => sum + (slice.count ?? 0), 0);
   const totalAmount = sorted.reduce((sum, slice) => sum + (Number(slice.amount) || 0), 0);
 
-  const other: CategorySlice = {
+  const other: CategorySpending = {
     category: OTHER_LABEL,
     amount: otherAmount,
     count: otherCount,
@@ -80,7 +75,7 @@ function buildSlices(data: CategorySpending[]): CategorySlice[] {
 }
 
 interface TooltipEntry {
-  payload?: CategorySlice;
+  payload?: CategorySpending;
 }
 
 interface CategoryTooltipProps {
