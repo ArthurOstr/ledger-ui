@@ -117,4 +117,5 @@ export interface CategorySpending {
   category: string;
   amount: number;
   percentage: number;
+  count: number;
 }

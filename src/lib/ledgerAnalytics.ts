@@ -185,7 +185,7 @@ export function computeFinancialSummary(
   }
 
   const vaults: CardVault[] = [];
-  buckets.forEach((bucket, key) => {
+  buckets.forEach((bucket) => {
     // Newest row wins: latest timestamp, highest id as the tiebreaker.
     const sorted = [...bucket].sort(byRecencyDesc);
     const latest = sorted[0];
