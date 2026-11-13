@@ -66,6 +66,7 @@ export interface Transaction {
   transaction_amount: number | null;
   hash_id: string;
   created_at: string;
+  exchange_rate: number | null;
 }
 
 // CATEGORIZATION RULES
