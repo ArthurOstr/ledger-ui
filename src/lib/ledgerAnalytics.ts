@@ -13,10 +13,12 @@ import type {
   CardVault,
   FinancialSummary,
   CategorySpending,
-  BalancePoint
+  BalancePoint,
+  PeriodPreset,
+  DateRange
 } from '@/types';
 
-export type { Transaction, BankScope, CardVault, FinancialSummary, CategorySpending, BalancePoint };
+export type { Transaction, BankScope, CardVault, FinancialSummary, CategorySpending, BalancePoint, PeriodPreset, DateRange };
 
 // ---------------------------------------------------------------------------
 // Internal helpers
@@ -84,6 +86,13 @@ function parseTimestamp(raw: string | null | undefined): number | null {
   return null;
 }
 
+/** Formats a Date as its local 'YYYY-MM-DD' calendar day key. */
+function formatLocalDayKey(date: Date): string {
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
 /** Normalizes any supported date representation to a 'YYYY-MM-DD' day key. */
 function toDayKey(raw: string): string {
   // ISO-like dates: slicing keeps the literal calendar day (timezone-safe).
@@ -91,10 +100,7 @@ function toDayKey(raw: string): string {
 
   const ts = parseTimestamp(raw);
   if (ts !== null) {
-    const d = new Date(ts);
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${d.getFullYear()}-${month}-${day}`;
+    return formatLocalDayKey(new Date(ts));
   }
 
   return raw;
@@ -123,6 +129,11 @@ function byRecencyDesc(a: Transaction, b: Transaction): number {
   return (Number(b.id) || 0) - (Number(a.id) || 0);
 }
 
+/** Stable per-card stream key: bank + trimmed card label. */
+function cardKeyOf(tx: Transaction): string {
+  return `${tx.bank}_${tx.card?.trim() || UNKNOWN}`;
+}
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -141,21 +152,118 @@ export function filterByBankScope(transactions: Transaction[], scope: BankScope)
 }
 
 /**
+ * Resolves a period preset into an explicit start/end day-key window
+ * ('YYYY-MM-DD', inclusive on both ends), computed from the local calendar.
+ * 'ALL_TIME' yields an open range; 'CUSTOM' passes the provided range through.
+ */
+export function resolvePeriodRange(preset: PeriodPreset, customRange?: DateRange): DateRange {
+  const now = new Date();
+
+  switch (preset) {
+    case 'ALL_TIME':
+      return { startDate: null, endDate: null };
+
+    case 'THIS_MONTH': {
+      const start = new Date(now.getFullYear(), now.getMonth(), 1);
+      const end = new Date(now.getFullYear(), now.getMonth() + 1, 0); // day 0 = last day of month
+      return { startDate: formatLocalDayKey(start), endDate: formatLocalDayKey(end) };
+    }
+
+    case 'LAST_MONTH': {
+      const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const end = new Date(now.getFullYear(), now.getMonth(), 0);
+      return { startDate: formatLocalDayKey(start), endDate: formatLocalDayKey(end) };
+    }
+
+    case 'LAST_30_DAYS': {
+      // Today minus 29 days keeps the window 30 days inclusive of both ends.
+      const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 29);
+      return { startDate: formatLocalDayKey(start), endDate: formatLocalDayKey(now) };
+    }
+
+    case 'LAST_90_DAYS': {
+      const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 89);
+      return { startDate: formatLocalDayKey(start), endDate: formatLocalDayKey(now) };
+    }
+
+    case 'THIS_QUARTER': {
+      const startMonth = Math.floor(now.getMonth() / 3) * 3;
+      const start = new Date(now.getFullYear(), startMonth, 1);
+      const end = new Date(now.getFullYear(), startMonth + 3, 0);
+      return { startDate: formatLocalDayKey(start), endDate: formatLocalDayKey(end) };
+    }
+
+    case 'LAST_QUARTER': {
+      // Negative month indexes roll back into the previous year automatically.
+      const startMonth = Math.floor(now.getMonth() / 3) * 3 - 3;
+      const start = new Date(now.getFullYear(), startMonth, 1);
+      const end = new Date(now.getFullYear(), startMonth + 3, 0);
+      return { startDate: formatLocalDayKey(start), endDate: formatLocalDayKey(end) };
+    }
+
+    case 'THIS_YEAR':
+      return {
+        startDate: `${now.getFullYear()}-01-01`,
+        endDate: `${now.getFullYear()}-12-31`,
+      };
+
+    case 'LAST_YEAR':
+      return {
+        startDate: `${now.getFullYear() - 1}-01-01`,
+        endDate: `${now.getFullYear() - 1}-12-31`,
+      };
+
+    case 'CUSTOM':
+    default:
+      return {
+        startDate: customRange?.startDate || null,
+        endDate: customRange?.endDate || null,
+      };
+  }
+}
+
+/**
+ * Narrows the ledger to the scope first, then keeps only rows whose day key
+ * falls inside the optional window (inclusive on both ends).
+ */
+export function filterTransactions(
+  transactions: Transaction[],
+  scope: BankScope,
+  range?: DateRange,
+): Transaction[] {
+  const scoped = filterByBankScope(transactions, scope);
+  if (!range) return scoped;
+
+  const { startDate, endDate } = range;
+  if (!startDate && !endDate) return scoped;
+
+  return scoped.filter((tx) => {
+    const day = toDayKey(tx.date);
+    if (startDate && day < startDate) return false;
+    if (endDate && day > endDate) return false;
+    return true;
+  });
+}
+
+/**
  * Full dashboard snapshot for the selected scope: UAH cashflow with a savings
- * rate, per-card vaults with their latest balances, and net worth split into
- * a UAH total plus per-currency foreign vault sums.
+ * rate (strictly inside the optional window), per-card vaults with their
+ * balances as of the window's end date, and net worth split into a UAH total
+ * plus per-currency foreign vault sums.
  */
 export function computeFinancialSummary(
   transactions: Transaction[],
   scope: BankScope,
+  range?: DateRange,
 ): FinancialSummary {
-  const scoped = filterByBankScope(transactions, scope);
-
   // --- Cashflow (primary UAH settlement currency only) ---
+  // Strictly from transactions inside the selected window.
+  const inPeriod = filterTransactions(transactions, scope, range);
+
   let totalIncome = 0;
   let totalExpenses = 0;
 
-  for (const tx of scoped) {
+  for (const tx of inPeriod) {
     if (resolveAmountCurrency(tx) !== 'UAH') continue;
 
     const amount = toSafeNumber(tx.amount);
@@ -173,8 +281,16 @@ export function computeFinancialSummary(
   }
 
   // --- Card vaults: latest known state per bank/card/currency ---
+  // All scoped rows up to the window's end (inclusive): cards with no activity
+  // inside a short window still report their closing balance as of endDate.
+  const scoped = filterByBankScope(transactions, scope);
+  const endDateKey = range?.endDate ?? null;
+  const asOfEnd = endDateKey === null
+    ? scoped
+    : scoped.filter((tx) => toDayKey(tx.date) <= endDateKey);
+
   const buckets = new Map<string, Transaction[]>();
-  for (const tx of scoped) {
+  for (const tx of asOfEnd) {
     const key = `${tx.bank}_${tx.card?.trim() || UNKNOWN}_${resolveSettlementCurrency(tx)}`;
     const bucket = buckets.get(key);
     if (bucket) {
@@ -236,14 +352,16 @@ export function computeFinancialSummary(
 }
 
 /**
- * Expense distribution per category for the selected scope. Only UAH expenses
- * count; uncategorized rows fall into 'Інше'. Sorted by amount, descending.
+ * Expense distribution per category for the selected scope within the optional
+ * window. Only UAH expenses count; uncategorized rows fall into 'Інше'.
+ * Sorted by amount, descending.
  */
 export function generateCategoryBreakdown(
   transactions: Transaction[],
   scope: BankScope,
+  range?: DateRange,
 ): CategorySpending[] {
-  const scoped = filterByBankScope(transactions, scope);
+  const scoped = filterTransactions(transactions, scope, range);
 
   const totals = new Map<string, { amount: number; count: number}>();
   let totalExpenses = 0;
@@ -279,12 +397,16 @@ const existing = totals.get(category) ?? { amount: 0, count: 0 };
 }
 
 /**
- * Daily closing-balance series for UAH accounts, ascending by date. When
- * several transactions share a calendar day, only the latest one is kept.
+ * Daily closing-balance series for UAH accounts within the optional window,
+ * ascending by date. When several transactions share a calendar day, only the
+ * latest one is kept. Each card opens the window at its last known balance
+ * from before the start date (or a reconstructed baseline when the card has
+ * no prior history), so short windows still chart true opening positions.
  */
 export function generateBalanceHistory(
   transactions: Transaction[],
   scope: BankScope,
+  range?: DateRange,
 ): BalancePoint[] {
   const scoped = filterByBankScope(transactions, scope);
 
@@ -294,23 +416,54 @@ export function generateBalanceHistory(
   });
 
   if (eligible.length === 0) return [];
-  
-// Group transactions by unique card stream
-  const cardStreams = new Map<string, Transaction[]>();
-  for (const tx of eligible) {
-    const cardKey = `${tx.bank}_${tx.card?.trim() || UNKNOWN}`;
-    const stream = cardStreams.get(cardKey);
-    if (stream) {
-      stream.push(tx);
-    } else {
-      cardStreams.set(cardKey, [tx]);
+
+  const startDateKey = range?.startDate ?? null;
+  const endDateKey = range?.endDate ?? null;
+
+  // Rows inside the window (inclusive) drive the daily closing totals.
+  const inPeriod = eligible.filter((tx) => {
+    const day = toDayKey(tx.date);
+    if (startDateKey !== null && day < startDateKey) return false;
+    if (endDateKey !== null && day > endDateKey) return false;
+    return true;
+  });
+
+  if (inPeriod.length === 0) return [];
+
+  // Latest known balance of every card strictly before the window start,
+  // so the series opens at real pre-window positions.
+  const priorBalances = new Map<string, number>();
+  if (startDateKey !== null) {
+    const prior = eligible
+      .filter((tx) => toDayKey(tx.date) < startDateKey)
+      .sort(byDateAsc);
+    for (const tx of prior) {
+      const bal = toNullableNumber(tx.balance_after);
+      if (bal !== null) priorBalances.set(cardKeyOf(tx), bal);
     }
   }
 
-  // Determine starting baseline balance for each card:
-  // Baseline = balance_after of first transaction - amount of first transaction
   const runningCardBalances = new Map<string, number>();
-  cardStreams.forEach((stream, cardKey) => {
+
+  // Cards with pre-window history start at their last known balance.
+  priorBalances.forEach((bal, cardKey) => {
+    runningCardBalances.set(cardKey, bal);
+  });
+
+  // Cards with no prior history fall back to the first in-window row:
+  // baseline = balance_after of first transaction - amount of first transaction.
+  const baselineStreams = new Map<string, Transaction[]>();
+  for (const tx of inPeriod) {
+    const cardKey = cardKeyOf(tx);
+    if (runningCardBalances.has(cardKey)) continue;
+    const stream = baselineStreams.get(cardKey);
+    if (stream) {
+      stream.push(tx);
+    } else {
+      baselineStreams.set(cardKey, [tx]);
+    }
+  }
+  baselineStreams.forEach((stream, cardKey) => {
     const chronological = [...stream].sort(byDateAsc);
     const firstTx = chronological[0];
     if (firstTx) {
@@ -322,7 +475,7 @@ export function generateBalanceHistory(
 
   // Ascending order so the "last write wins" pass below keeps the latest
   // transaction (latest timestamp, highest id) of every calendar day.
-  const allChronological = [...eligible].sort(byDateAsc);
+  const allChronological = [...inPeriod].sort(byDateAsc);
 
   const dayGroups = new Map<string, Transaction[]>();
   for (const tx of allChronological) {
@@ -340,8 +493,8 @@ export function generateBalanceHistory(
   dayGroups.forEach((dayTxs, dayKey) => {
     let latestTs = 0;
 
-for (const tx of dayTxs) {
-      const cardKey = `${tx.bank}_${tx.card?.trim() || UNKNOWN}`;
+    for (const tx of dayTxs) {
+      const cardKey = cardKeyOf(tx);
       const bal = toNullableNumber(tx.balance_after);
       if (bal !== null) {
         runningCardBalances.set(cardKey, bal);
