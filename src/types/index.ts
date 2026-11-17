@@ -120,3 +120,22 @@ export interface CategorySpending {
   percentage: number;
   count: number;
 }
+
+// Period filtering
+
+export type PeriodPreset =
+  | 'ALL_TIME'
+  | 'THIS_MONTH'
+  | 'LAST_MONTH'
+  | 'LAST_30_DAYS'
+  | 'LAST_90_DAYS'
+  | 'THIS_QUARTER'
+  | 'LAST_QUARTER'
+  | 'THIS_YEAR'
+  | 'LAST_YEAR'
+  | 'CUSTOM';
+
+export interface DateRange {
+  startDate: string | null; 
+  endDate: string | null;   
+}
