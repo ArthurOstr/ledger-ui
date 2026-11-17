@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { getTransactions } from '../api/client';
-import type { Transaction, BankScope, CardVault } from '@/types';
+import type { Transaction, BankScope, CardVault, PeriodPreset, DateRange } from '@/types';
 import { useAuth } from '../context/AuthContext';
 
 import TransactionTable from '../components/TransactionTable';
@@ -8,12 +8,15 @@ import FileUpload       from '../components/FileUpload';
 import RuleSheet        from '../components/RuleSheet';
 import BalanceChart     from '../components/BalanceChart';
 import CategoryChart    from '../components/CategoryChart';
+import PeriodSelector   from '../components/PeriodSelector';
 
 import {
   computeFinancialSummary,
   generateCategoryBreakdown,
   generateBalanceHistory,
-  filterByBankScope,
+  filterTransactions,
+  resolvePeriodRange,
+  getLatestTransactionDate,
 } from '@/lib/ledgerAnalytics';
 
 import {
@@ -239,6 +242,8 @@ export default function Dashboard() {
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [scope, setScope]               = useState<BankScope>('ALL');
+  const [preset, setPreset]             = useState<PeriodPreset>('ALL_TIME');
+  const [customRange, setCustomRange]   = useState<DateRange>({ startDate: null, endDate: null });
   const [loading, setLoading]           = useState(true);
   const [error, setError]               = useState<string | null>(null);
 
@@ -293,24 +298,34 @@ export default function Dashboard() {
   // All aggregations live in ledgerAnalytics and are currency-aware: cashflow,
   // category spending and balance history are UAH-anchored, while foreign
   // vaults are reported separately and never mixed into UAH totals.
+  const activeRange = useMemo(
+    () => resolvePeriodRange(preset, customRange),
+    [preset, customRange]
+  );
+
+  const latestTxDate = useMemo(
+    () => getLatestTransactionDate(transactions),
+    [transactions]
+  );
+
   const scopedTransactions = useMemo(
-    () => filterByBankScope(transactions, scope),
-    [transactions, scope]
+    () => filterTransactions(transactions, scope, activeRange),
+    [transactions, scope, activeRange]
   );
 
   const summary = useMemo(
-    () => computeFinancialSummary(transactions, scope),
-    [transactions, scope]
+    () => computeFinancialSummary(transactions, scope, activeRange),
+    [transactions, scope, activeRange]
   );
 
   const categoryData = useMemo(
-    () => generateCategoryBreakdown(transactions, scope),
-    [transactions, scope]
+    () => generateCategoryBreakdown(transactions, scope, activeRange),
+    [transactions, scope, activeRange]
   );
 
   const balanceHistory = useMemo(
-    () => generateBalanceHistory(transactions, scope),
-    [transactions, scope]
+    () => generateBalanceHistory(transactions, scope, activeRange),
+    [transactions, scope, activeRange]
   );
 
   return (
@@ -345,8 +360,24 @@ export default function Dashboard() {
       {/* ── Main content ─────────────────────────────────────────────── */}
       <main className="px-6 py-6 space-y-8">
 
-        {/* Bank scope switcher */}
-        <ScopeSwitcher scope={scope} onChange={setScope} />
+        {/* Toolbar: scope switcher left — freshness + period controls right */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <ScopeSwitcher scope={scope} onChange={setScope} />
+
+          <div className="flex flex-wrap items-center gap-2">
+            {latestTxDate && (
+              <span className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[11px] text-[#6b6864] tabular-nums">
+                Data through {latestTxDate}
+              </span>
+            )}
+            <PeriodSelector
+              preset={preset}
+              customRange={customRange}
+              onPresetChange={setPreset}
+              onCustomRangeChange={setCustomRange}
+            />
+          </div>
+        </div>
 
         {/* Loading state — skeleton layout */}
         {loading && <LoadingSkeleton />}

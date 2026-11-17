@@ -64,10 +64,9 @@ function parseTimestamp(raw: string | null | undefined): number | null {
   if (typeof raw !== 'string' || raw.trim() === '') return null;
   const trimmed = raw.trim();
 
-  const direct = Date.parse(trimmed);
-  if (Number.isFinite(direct)) return direct;
-
-// 'DD.MM.YYYY' with optional 'HH:mm:ss'
+  // 'DD.MM.YYYY' with optional 'HH:mm:ss'
+  // Checked before Date.parse(): WebKit/Safari parse dotted input as
+  // MM.DD.YYYY and would silently swap day/month for days 1-12.
   const dotted = /^(\d{1,2})\.(\d{1,2})\.(\d{4})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/.exec(trimmed);
   if (dotted) {
     const day = Number(dotted[1]);
@@ -79,6 +78,9 @@ function parseTimestamp(raw: string | null | undefined): number | null {
     const time = new Date(year, month - 1, day, hour, min, sec).getTime();
     if (Number.isFinite(time)) return time;
   }
+
+  const direct = Date.parse(trimmed);
+  if (Number.isFinite(direct)) return direct;
   // Bare epoch values supplied as strings (seconds or milliseconds).
   const numeric = Number(trimmed);
   if (Number.isFinite(numeric)) return numeric < 1e11 ? numeric * 1000 : numeric;
@@ -97,6 +99,15 @@ function formatLocalDayKey(date: Date): string {
 function toDayKey(raw: string): string {
   // ISO-like dates: slicing keeps the literal calendar day (timezone-safe).
   if (/^\d{4}-\d{2}-\d{2}/.test(raw)) return raw.slice(0, 10);
+
+  // 'DD.MM.YYYY' dates: map components straight to the day key (timezone-safe,
+  // mirroring the ISO fast path) instead of routing through Date.parse().
+  const dotted = /^(\d{1,2})\.(\d{1,2})\.(\d{4})/.exec(raw);
+  if (dotted) {
+    const day = String(Number(dotted[1])).padStart(2, '0');
+    const month = String(Number(dotted[2])).padStart(2, '0');
+    return `${dotted[3]}-${month}-${day}`;
+  }
 
   const ts = parseTimestamp(raw);
   if (ts !== null) {
@@ -387,7 +398,7 @@ const existing = totals.get(category) ?? { amount: 0, count: 0 };
   totals.forEach(({amount, count}, category) => {
     breakdown.push({
       category,
-      amount,
+      amount: round2(amount),
       count,
       percentage: totalExpenses > 0 ? Math.round((amount / totalExpenses) * 100) : 0,
     });
@@ -511,9 +522,32 @@ export function generateBalanceHistory(
     points.push({
       date: formatDayLabel(dayKey),
       timestamp: latestTs,
-      balance: dailyNetTotal,
+      balance: round2(dailyNetTotal),
     });
   });
 
   return points.sort((a, b) => a.timestamp - b.timestamp);
+}
+
+/**
+ * Calendar date ('DD.MM.YYYY') of the most recent transaction in the ledger,
+ * or null when there are no rows with a parseable date. Drives the
+ * statement-freshness indicator on the dashboard.
+ */
+export function getLatestTransactionDate(transactions: Transaction[]): string | null {
+  let latestTs: number | null = null;
+
+  for (const tx of transactions) {
+    const ts = parseTimestamp(tx.date);
+    if (ts !== null && (latestTs === null || ts > latestTs)) {
+      latestTs = ts;
+    }
+  }
+
+  if (latestTs === null) return null;
+
+  const date = new Date(latestTs);
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  return `${day}.${month}.${date.getFullYear()}`;
 }
