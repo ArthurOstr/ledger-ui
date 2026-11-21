@@ -269,6 +269,8 @@ export function computeFinancialSummary(
 ): FinancialSummary {
   // --- Cashflow (primary UAH settlement currency only) ---
   // Strictly from transactions inside the selected window.
+  // Transfer rows are skipped: moving funds between own cards is neither
+  // income nor an expense (they still count toward vaults/net worth below).
   const inPeriod = filterTransactions(transactions, scope, range);
 
   let totalIncome = 0;
@@ -276,6 +278,7 @@ export function computeFinancialSummary(
 
   for (const tx of inPeriod) {
     if (resolveAmountCurrency(tx) !== 'UAH') continue;
+    if (tx.is_transfer === true) continue;
 
     const amount = toSafeNumber(tx.amount);
     if (amount > 0) {
@@ -379,6 +382,7 @@ export function generateCategoryBreakdown(
 
   for (const tx of scoped) {
     if (resolveAmountCurrency(tx) !== 'UAH') continue;
+    if (tx.is_transfer === true) continue; // self-transfers are not spending
 
     const amount = toSafeNumber(tx.amount);
     if (amount >= 0) continue; // strictly expenses
@@ -421,6 +425,8 @@ export function generateBalanceHistory(
 ): BalancePoint[] {
   const scoped = filterByBankScope(transactions, scope);
 
+  // Transfer rows are intentionally kept: they move balances between own
+  // cards, so excluding them would distort the daily closing totals.
   const eligible = scoped.filter((tx) => {
     if (toNullableNumber(tx.balance_after) === null) return false;
     return resolveSettlementCurrency(tx) === 'UAH';

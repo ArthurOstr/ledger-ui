@@ -279,12 +279,19 @@ focus-visible:ring-white/20"
                       </TableCell>
                     )}
                     <TableCell>
-                      <Badge variant={categoryVariant(tx.category)} className="text-[11px] border-white/10 text-[#a09d98] bg-white/5 font-normal">
-                        {tx.category ?? '—'}
-                      </Badge>
+                      <div className="flex items-center gap-1.5">
+                        <Badge variant={categoryVariant(tx.category)} className="text-[11px] border-white/10 text-[#a09d98] bg-white/5 font-normal">
+                          {tx.category ?? '—'}
+                        </Badge>
+                        {tx.is_transfer && (
+                          <span className="inline-flex items-center rounded-full border bg-blue-500/10 px-2 py-0.5 text-[11px] font-medium text-blue-400 border-blue-500/20 whitespace-nowrap">
+                            Transfer
+                          </span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-sm font-medium text-right whitespace-nowrap tabular-nums">
-                      <div className={tx.amount < 0 ? 'text-red-400' : 'text-emerald-400'}>
+                      <div className={tx.is_transfer ? 'text-[#a09d98]' : tx.amount < 0 ? 'text-red-400' : 'text-emerald-400'}>
                         {formatAmount(tx.amount, tx.currency)}
                       </div>
                       {fxSubtitle && (
